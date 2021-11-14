@@ -626,8 +626,9 @@ class FreqtradeBot(LoggingMixin):
                                                  default_retval=stake_amount)(
                 pair=pair, current_time=datetime.now(timezone.utc),
                 current_rate=enter_limit_requested, proposed_stake=stake_amount,
-                min_stake=min_stake_amount, max_stake=max_stake_amount, side='long')
-        # TODO-lev: Add non-hardcoded "side" parameter
+                min_stake=min_stake_amount, max_stake=max_stake_amount,
+                side='short' if is_short else 'long'
+            )
 
         stake_amount = self.wallets._validate_stake_amount(pair, stake_amount, min_stake_amount)
 
@@ -647,7 +648,6 @@ class FreqtradeBot(LoggingMixin):
             order_type = self.strategy.order_types.get('forcebuy', order_type)
         # TODO-lev: Will this work for shorting?
 
-        # TODO-lev: Add non-hardcoded "side" parameter
         if not strategy_safe_wrapper(self.strategy.confirm_trade_entry, default_retval=True)(
                 pair=pair, order_type=order_type, amount=amount, rate=enter_limit_requested,
                 time_in_force=time_in_force, current_time=datetime.now(timezone.utc),
@@ -931,8 +931,7 @@ class FreqtradeBot(LoggingMixin):
         Check if trade is fulfilled in which case the stoploss
         on exchange should be added immediately if stoploss on exchange
         is enabled.
-        # TODO-lev: liquidation price will always be on exchange, even though
-        # TODO-lev: stoploss_on_exchange might not be enabled
+        # TODO-lev: liquidation price always on exchange, even without stoploss_on_exchange
         """
 
         logger.debug('Handling stoploss on exchange %s ...', trade)
@@ -1526,7 +1525,7 @@ class FreqtradeBot(LoggingMixin):
         self.wallets.update()
         if fee_abs != 0 and self.wallets.get_free(trade_base_currency) >= amount:
             # Eat into dust if we own more than base currency
-            # TODO-lev: won't be in base currency for shorts
+            # TODO-lev: settle currency for futures
             logger.info(f"Fee amount for {trade} was in base currency - "
                         f"Eating Fee {fee_abs} into dust.")
         elif fee_abs != 0:
